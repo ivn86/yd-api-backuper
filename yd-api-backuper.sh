@@ -4,22 +4,15 @@
 #       Author        :   Zharenkov I.V.
 #       License       :   GNU/GPL2
 #       Date          :   2014-07-17
-#	    Requirements  :   curl
+#	Requirements  :   curl
+#       Version       :   0.2
 #
 
-
-if [ ! -f "$1" ];
-then
-    echo "Error: IMHO file $1 does not exist or unreadable. Check filename."
-    exit 1
-fi
 
 # ---------- SETTINGS -------------
 
 # Yandex.Disk token
 token=''
-
-backupName=`date "+%Y%m%d-%H%M"`_$(basename $1)
 
 # Target directory. Be sure, that the directory exists.
 backupDir='backup'
@@ -27,12 +20,41 @@ backupDir='backup'
 # Logfile name
 logFile=yd-api-backuper.log
 
+# Enable GPG encryption
+GPG=false
+
+# GPG encryption UID
+GPGENCRYPTUID=''
+
+
 # ---------- FUNCTIONS ------------
+
+function usage
+{
+cat <<EOF
+
+USAGE: $0 OPTIONS
+
+OPTIONS:
+
+  -h  Show this message
+  -f <filename>  Specify filename for upload
+  -e  Enable GPG encryption
+  -g <uid>  Specify GPG UID
+
+EOF
+}
+
+function gpgEncrypt()
+{
+    gpg -e -r $GPGENCRYPTUID $FILENAME
+}
 
 function logger()
 {
-    echo "["`date "+%Y-%m-%d %H:%M:%S"`"] $backupName: $1" >> $logFile
+    echo "["`date "+%Y-%m-%d %H:%M:%S"`"] File $FILENAME: $1" >> $logFile
 }
+
 function parseJson()
 {
     local output
@@ -85,6 +107,70 @@ function uploadFile
     fi
 }
 
+function preUpload()
+{
+    if [ $GPG == true ];
+    then
+	gpgEncrypt
+	FILENAME=$FILENAME.gpg
+    fi
+
+    backupName=`date "+%Y%m%d-%H%M"`_$(basename $FILENAME)
+}
+
+function postUpload()
+{
+    if [ $GPG == true ];
+    then
+	rm $FILENAME
+    fi
+}
+
+# --------------- OPTIONS -------------
+
+while getopts ":f:g:he" opt; do
+    case $opt in
+	h)
+	    usage
+	    exit 1
+	    ;;
+	f)
+	    FILENAME=$OPTARG
+
+	    if [ ! -f $FILENAME ];
+	    then
+		echo "File not found: $FILENAME"
+		logger "File not found"
+		exit 1
+	    fi
+	    ;;
+	g)
+	    GPGENCRYPTUID=$OPTARG
+	    ;;
+	e)
+	    GPG=true
+	    ;;
+	\?)
+	    echo "Invalid option: -$OPTARG. $0 -h for help" >&2
+	    exit 1
+	    ;;
+	:)
+	    echo "Option -$OPTARG requires an argument." >&2
+	    exit 1
+	    ;;
+    esac
+done
+
 # --------------- MAIN ----------------
 
-uploadFile $1
+if [[ -z $FILENAME ]]
+then
+    usage
+    exit 1
+fi
+
+preUpload
+
+uploadFile $FILENAME
+
+postUpload
