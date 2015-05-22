@@ -4,8 +4,9 @@
 #       Author        :   Zharenkov I.V.
 #       License       :   GNU/GPL2
 #       Date          :   2014-07-17
-#	Requirements  :   curl
-#       Version       :   0.2
+#       Update        :   2015-05-22
+#	    Requirements  :   curl
+#       Version       :   0.3
 #
 
 
@@ -25,6 +26,9 @@ GPG=false
 
 # GPG encryption UID
 GPGENCRYPTUID=''
+
+# Send log to email
+mailLog=''
 
 
 # ---------- FUNCTIONS ------------
@@ -49,6 +53,17 @@ function gpgEncrypt()
 {
     gpg -e -r $GPGENCRYPTUID $FILENAME
 }
+
+function mailing()
+{
+    # Function's arguments:
+    # $1 -- email subject
+    # $2 -- email body
+    if [ ! $mailLog = '' ];then
+	    echo "$2" | mail -s "$1" $mailLog > /dev/null
+    fi
+}
+
 
 function logger()
 {
@@ -77,11 +92,12 @@ function getUploadUrl()
     json_error=$(checkError "$json_out")
     if [[ $json_error != '' ]];
     then
-	logger "Yandex Disk error: $json_error"
-	exit 1	
+	    logger "Yandex Disk error: $json_error"
+        mailing "Yandex Disk backup error" "ERROR copy file $FILENAME. Yandex Disk error: $json_error"
+        exit 1	
     else
-	output=$(parseJson 'href' $json_out)
-	echo $output
+	    output=$(parseJson 'href' $json_out)
+	    echo $output
     fi
 }
 
@@ -93,17 +109,21 @@ function uploadFile
     uploadUrl=$(getUploadUrl)
     if [[ $uploadUrl != '' ]];
     then
-	json_out=`curl -s -T $1 -H "Authorization: OAuth $token" $uploadUrl`
-	json_error=$(checkError "$json_out")
+	    json_out=`curl -s -T $1 -H "Authorization: OAuth $token" $uploadUrl`
+	    json_error=$(checkError "$json_out")
 	if [[ $json_error != '' ]];
 	then
 	    logger "Yandex Disk error: $json_error"
+        mailing "Yandex Disk backup error" "ERROR copy file $FILENAME. Yandex Disk error: $json_error"
+
 	else
 	    logger "Copying file to Yandex Disk success"
+        mailing "Yandex Disk backup success" "SUCCESS copy file $FILENAME"
+
 	fi
     else
 	echo 'Some errors occured. Check log file for detail'
-	exit 1
+	    exit 1
     fi
 }
 
@@ -111,8 +131,8 @@ function preUpload()
 {
     if [ $GPG == true ];
     then
-	gpgEncrypt
-	FILENAME=$FILENAME.gpg
+	    gpgEncrypt
+	    FILENAME=$FILENAME.gpg
     fi
 
     backupName=`date "+%Y%m%d-%H%M"`_$(basename $FILENAME)
@@ -122,7 +142,7 @@ function postUpload()
 {
     if [ $GPG == true ];
     then
-	rm $FILENAME
+	    rm $FILENAME
     fi
 }
 
@@ -139,9 +159,9 @@ while getopts ":f:g:he" opt; do
 
 	    if [ ! -f $FILENAME ];
 	    then
-		echo "File not found: $FILENAME"
-		logger "File not found"
-		exit 1
+		    echo "File not found: $FILENAME"
+		    logger "File not found"
+		    exit 1
 	    fi
 	    ;;
 	g)
