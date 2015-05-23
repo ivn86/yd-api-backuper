@@ -30,6 +30,8 @@ GPGENCRYPTUID=''
 # Send log to email
 mailLog=''
 
+# Send email error only
+mailLogErrorOnly=false
 
 # ---------- FUNCTIONS ------------
 
@@ -60,7 +62,15 @@ function mailing()
     # $1 -- email subject
     # $2 -- email body
     if [ ! $mailLog = '' ];then
-	    echo "$2" | mail -s "$1" $mailLog > /dev/null
+        if [ "$mailLogErrorOnly" == true ];
+        then
+            if echo "$1" | grep -q 'error'
+            then   
+                echo "$2" | mail -s "$1" $mailLog > /dev/null
+            fi
+        else
+            echo "$2" | mail -s "$1" $mailLog > /dev/null
+        fi
     fi
 }
 
@@ -161,6 +171,7 @@ while getopts ":f:g:he" opt; do
 	    then
 		    echo "File not found: $FILENAME"
 		    logger "File not found"
+            mailing "Yandex Disk backup error" "ERROR copy file $FILENAME. File not found."
 		    exit 1
 	    fi
 	    ;;
