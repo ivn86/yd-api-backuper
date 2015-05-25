@@ -4,9 +4,9 @@
 #       Author        :   Zharenkov I.V.
 #       License       :   GNU/GPL2
 #       Date          :   2014-07-17
-#       Update        :   2015-05-22
+#       Update        :   2015-05-25
 #	    Requirements  :   curl
-#       Version       :   0.3
+#       Version       :   0.4
 #
 
 
@@ -20,9 +20,6 @@ backupDir='backup'
 
 # Logfile name
 logFile=yd-api-backuper.log
-
-# Enable GPG encryption
-GPG=false
 
 # GPG encryption UID
 GPGENCRYPTUID=''
@@ -44,9 +41,10 @@ USAGE: $0 OPTIONS
 OPTIONS:
 
   -h  Show this message
-  -f <filename>  Specify filename for upload
-  -e  Enable GPG encryption
-  -g <uid>  Specify GPG UID
+  -f  <filename>  Specify filename for upload
+  -g  <uid>  Specify GPG UID
+  -m  <email@address> Specify email for logging
+  -e  Send mail on error only
 
 EOF
 }
@@ -139,7 +137,7 @@ function uploadFile
 
 function preUpload()
 {
-    if [ $GPG == true ];
+    if [ ! $GPGENCRYPTUID = '' ];
     then
 	    gpgEncrypt
 	    FILENAME=$FILENAME.gpg
@@ -150,7 +148,7 @@ function preUpload()
 
 function postUpload()
 {
-    if [ $GPG == true ];
+    if [ ! $GPGENCRYPTUID = '' ];
     then
 	    rm $FILENAME
     fi
@@ -158,7 +156,7 @@ function postUpload()
 
 # --------------- OPTIONS -------------
 
-while getopts ":f:g:he" opt; do
+while getopts ":f:g:m:he" opt; do
     case $opt in
 	h)
 	    usage
@@ -179,8 +177,11 @@ while getopts ":f:g:he" opt; do
 	    GPGENCRYPTUID=$OPTARG
 	    ;;
 	e)
-	    GPG=true
+	    mailLogErrorOnly=true
 	    ;;
+    m)
+        mailLog=$OPTARG
+        ;;
 	\?)
 	    echo "Invalid option: -$OPTARG. $0 -h for help" >&2
 	    exit 1
@@ -205,3 +206,4 @@ preUpload
 uploadFile $FILENAME
 
 postUpload
+

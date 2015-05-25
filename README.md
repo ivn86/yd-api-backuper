@@ -6,6 +6,7 @@ Features
 * OAuth authorization
 * Needs only curl (no webdav or yandex client)
 * GPG encryption
+* email notification
 
 Settings
 --------
@@ -13,17 +14,19 @@ Settings
 token -- token for Yandex.Disk application
 backupDir -- name of backup directory
 logFile -- name of logfile
-GPG -- enable GPG encryption
 GPGENCRYPTUID -- GPG UID
+mailLog -- email address for sending logs
+mailLogErrorOnly -- send email only if error occured
 
 Options
 -------
 
 <pre>
     -h  Show help
-    -f <filename>  Specify filename for upload
-    -e  Enable GPG encryption
-    -g <uid>  Specify GPG UID
+    -f /path/to/file  Specify filename for upload
+    -g user@gpgid  Specify GPG UID
+    -m user@localhost  Specify email for logging
+    -e  Send email on error only
 </pre>
 
 Usage
@@ -35,5 +38,9 @@ Copy file to Yandex Disk:
 ```
 Encrypt and copy file to Yandex Disk:
 ```bash
-./yd-api-backuper.sh -f /path/to/file/file_name -e -g username@server
+./yd-api-backuper.sh -f /path/to/file/file_name -g username@server
+```
+Copy file to Yandex Disk and notify user about errors
+```bash
+./yd-api-backuper.sh -f /path/to/file/file_name -m user@localhost -e
 ```
